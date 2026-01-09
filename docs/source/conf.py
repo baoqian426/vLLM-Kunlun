@@ -65,17 +65,15 @@ myst_substitutions = {
     # the branch of vllm, used in vllm clone
     # - main branch: 'main'
     # - vX.Y.Z branch: 'vX.Y.Z'
-    "vllm_version": "v0.11.0rc3",
+    "vllm_version": "v0.11.0",
     # the branch of vllm-kunlun, used in vllm-kunlun clone and image tag
     # - main branch: 'main'
     # - vX.Y.Z branch: latest vllm-kunlun release tag
-    "vllm_kunlun_version": "v0.11.0rc0",
+    "vllm_kunlun_version": "v0.11.0",
     # the newest release version of vllm-kunlun and matched vLLM, used in pip install.
     # This value should be updated when cut down release.
-    "pip_vllm_kunlun_version": "0.11.0rc0",
+    "pip_vllm_kunlun_version": "0.11.0",
     "pip_vllm_version": "0.11.0",
-    # CANN image tag
-    "cann_image_tag": "8.3.rc1-910b-ubuntu22.04-py3.11",
     # vllm version in ci
     "ci_vllm_version": "v0.11.0",
 }
@@ -104,7 +102,6 @@ exclude_patterns = [
     ".venv",
     "README.md",
     "user_guide/release.template.md",
-    # TODO(yikun): Remove this after zh supported
     "**/*.zh.md",
 ]
 
@@ -118,7 +115,7 @@ html_theme = "sphinx_book_theme"
 html_logo = "logos/vllm-kunlun-logo-text-light.png"
 html_theme_options = {
     "path_to_docs": "docs/source",
-    "repository_url": "https://github.com/xxxxx/vllm-kunlun",
+    "repository_url": "https://github.com/baidu/vLLM-Kunlun",
     "use_repository_button": True,
     "use_edit_page_button": True,
 }
