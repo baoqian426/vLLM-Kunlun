@@ -57,7 +57,8 @@ from vllm.model_executor.layers.logits_processor import LogitsProcessor
 from vllm_kunlun.ops.attention.mla import MLAModules, MultiHeadLatentAttention
 from vllm.model_executor.layers.quantization import QuantizationConfig
 from vllm.model_executor.layers.rotary_embedding import get_rope
-from vllm.model_executor.layers.shared_fused_moe import SharedFusedMoE
+# from vllm.model_executor.layers.shared_fused_moe import SharedFusedMoE
+from vllm_kunlun.ops.shared_fused_moe.shared_fused_moe import SharedFusedMoE
 from vllm.model_executor.layers.vocab_parallel_embedding import (
     ParallelLMHead, VocabParallelEmbedding)
 from vllm.model_executor.model_loader.weight_utils import (
@@ -253,8 +254,10 @@ class DeepseekV2MoE(nn.Module):
 
         # router_logits: (num_tokens, n_experts)
         router_logits, _ = self.gate(hidden_states)
+        kunlun_linear_weights = self.gate.get_weights()
         fused_moe_out = self.experts(hidden_states=hidden_states,
-                                     router_logits=router_logits)
+                                     router_logits=router_logits,
+                                     linear_weights=kunlun_linear_weights)
 
         if self.shared_experts is not None:
             shared_output, final_hidden_states = fused_moe_out
