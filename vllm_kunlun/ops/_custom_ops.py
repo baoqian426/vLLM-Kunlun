@@ -3069,3 +3069,30 @@ def gather_and_maybe_dequant_cache(
         scale=scale,
         seq_starts=seq_starts,
     )
+
+
+##################################################
+# ------------- weak_ref_tensor -------------
+##################################################
+# ``vllm/compilation/cuda_graph.py`` wraps every captured output through
+# ``torch.ops._C.weak_ref_tensor`` so the cached graph entry does not keep that
+# buffer alive. Upstream ships it as a C++ op, which the Kunlun build does not
+# have, and without it cudagraph capture fails with "'_OpNamespace' '_C' object
+# has no attribute 'weak_ref_tensor'".
+#
+# Registered through torch.library.Library rather than torch.library.custom_op
+# because custom_op rejects returning an alias of an input. This alias is a
+# strong reference, which differs from upstream only in lifetime: the buffer
+# lives in the graph's private memory pool and is reused on every replay either
+# way, so the values the caller sees are the same.
+if not hasattr(torch.ops._C, "weak_ref_tensor"):
+    _KUNLUN_C_LIB = torch.library.Library("_C", "FRAGMENT")
+    _KUNLUN_C_LIB.define("weak_ref_tensor(Tensor input) -> Tensor")
+
+    def _kunlun_weak_ref_tensor(input: torch.Tensor) -> torch.Tensor:
+        return torch.as_strided(
+            input, input.size(), input.stride(), input.storage_offset()
+        )
+
+    _KUNLUN_C_LIB.impl("weak_ref_tensor", _kunlun_weak_ref_tensor, "CUDA")
+    _KUNLUN_C_LIB.impl("weak_ref_tensor", _kunlun_weak_ref_tensor, "CPU")
