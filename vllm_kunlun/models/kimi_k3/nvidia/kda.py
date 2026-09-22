@@ -689,12 +689,12 @@ class KimiK3DeltaAttention(GatedDeltaNetAttention):
 
         self.o_norm = FusedRMSNormGated(self.head_dim, activation="sigmoid")
         decode_norm_weight = None
-        if decode_conv1d_weight is not None:
-            decode_norm_weight = torch.empty(
-                self.head_dim,
-                dtype=torch.float32,
-                device=self.o_norm.weight.device,
-            )
+        # if decode_conv1d_weight is not None:
+        decode_norm_weight = torch.empty(
+            self.head_dim,
+            dtype=torch.float32,
+            device=self.o_norm.weight.device,
+        )
         self.register_buffer("decode_norm_weight", decode_norm_weight, persistent=False)
         if decode_norm_weight is not None:
             # Upcast once while loading; direct BF16 norm weights slow the
@@ -1000,6 +1000,7 @@ class KimiK3DeltaAttention(GatedDeltaNetAttention):
                     validate_data=True,
                     out=packed_conv_out,
                 )
+                '''
                 (
                     core_attn_out_non_spec,
                     _,
@@ -1013,6 +1014,38 @@ class KimiK3DeltaAttention(GatedDeltaNetAttention):
                     initial_state=recurrent_state,
                     state_indices=decode_conv_indices,
                 )
+                '''
+
+                # core_attn_out_non_spec = torch.ops.xspeedgate_ops.fused_recurrent_kda_packed_decode_onorm(
+                #     mixed_qkv=mixed_qkv_ns,
+                #     raw_g=g1_ns,
+                #     raw_beta=beta_ns,
+                #     A_log=self.A_log,
+                #     dt_bias=self.dt_bias,
+                #     lower_bound=self.gate_lower_bound,
+                #     initial_state=recurrent_state,
+                #     state_indices=decode_conv_indices,
+                #     output_gate=g2,
+                #     onorm_weight=self.decode_norm_weight,
+                #     onorm_eps=self.o_norm.eps,
+                # )
+                # core_attn_out.copy_(core_attn_out_non_spec)
+
+                core_attn_out_non_spec = torch.ops.xspeedgate_ops.fused_recurrent_kda_packed_decode_onorm(
+                    mixed_qkv=mixed_qkv_ns,
+                    raw_g=g1_ns,
+                    raw_beta=beta_ns,
+                    A_log=self.A_log,
+                    dt_bias=self.dt_bias,
+                    lower_bound=self.gate_lower_bound,
+                    initial_state=recurrent_state,
+                    state_indices=decode_conv_indices[:num_actual_tokens],
+                    output_gate=g2[:num_actual_tokens],
+                    onorm_weight=self.decode_norm_weight,
+                    onorm_eps=self.o_norm.eps,
+                )
+                core_attn_out.copy_(core_attn_out_non_spec)
+                return
 
         # Restore the scheduler's original token order for mixed batches.
         if core_attn_out_spec is not None and core_attn_out_non_spec is not None:
